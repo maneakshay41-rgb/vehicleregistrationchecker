@@ -53,36 +53,43 @@ function timingSafeEqual(a: string, b: string): boolean {
 interface SessionPayload {
   sub: string
   exp: number
+  // Session version. Must match the current server-side epoch; a password reset
+  // bumps the epoch, which invalidates every previously issued session.
+  sv: number
 }
 
-export async function createSessionToken(email: string): Promise<string> {
+export async function createSessionToken(email: string, sessionVersion: number): Promise<string> {
   const payload: SessionPayload = {
     sub: email,
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE,
+    sv: sessionVersion,
   }
   const encodedPayload = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)))
   const signature = await sign(encodedPayload)
   return `${encodedPayload}.${signature}`
 }
 
-export async function verifySessionToken(token: string | undefined): Promise<boolean> {
-  if (!token) return false
+// Verifies the signature and expiry only (no I/O), returning the decoded payload
+// so callers can additionally check the session version. Returns null if invalid.
+export async function parseSessionToken(token: string | undefined): Promise<SessionPayload | null> {
+  if (!token) return null
   const [encodedPayload, signature] = token.split(".")
-  if (!encodedPayload || !signature) return false
+  if (!encodedPayload || !signature) return null
 
   const expectedSignature = await sign(encodedPayload)
-  if (!timingSafeEqual(signature, expectedSignature)) return false
+  if (!timingSafeEqual(signature, expectedSignature)) return null
 
   try {
     const payload = JSON.parse(
       new TextDecoder().decode(base64UrlDecode(encodedPayload)),
     ) as SessionPayload
     if (typeof payload.exp !== "number" || payload.exp < Math.floor(Date.now() / 1000)) {
-      return false
+      return null
     }
-    return true
+    if (typeof payload.sv !== "number") return null
+    return payload
   } catch {
-    return false
+    return null
   }
 }
 

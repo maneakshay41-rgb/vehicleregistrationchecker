@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server"
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/auth"
-
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false
-  let result = 0
-  for (let i = 0; i < a.length; i++) result |= a.charCodeAt(i) ^ b.charCodeAt(i)
-  return result === 0
-}
+import { getRedis, getSessionEpoch, REDIS_KEYS } from "@/lib/redis"
+import { timingSafeEqual, verifyPassword } from "@/lib/password"
 
 export async function POST(request: Request) {
   const expectedEmail = process.env.STAFF_LOGIN_EMAIL
@@ -30,17 +25,37 @@ export async function POST(request: Request) {
   }
 
   const emailMatches = safeEqual(email.toLowerCase(), expectedEmail.trim().toLowerCase())
-  const passwordMatches = safeEqual(password, expectedPassword)
 
-  if (!emailMatches || !passwordMatches) {
-    return NextResponse.json(
-      { ok: false, error: "Incorrect email or password." },
-      { status: 401 },
-    )
+  // If the password has been reset, a hash is stored in Redis and takes
+  // precedence over the environment password. Otherwise fall back to the env.
+  let passwordMatches = false
+  try {
+    const storedHash = await getRedis().get<string>(REDIS_KEYS.passwordHash)
+    passwordMatches = storedHash
+      ? await verifyPassword(password, storedHash)
+      : safeEqual(password, expectedPassword)
+  } catch {
+    // If Redis is unreachable, fall back to the environment password.
+    passwordMatches = safeEqual(password, expectedPassword)
   }
 
-  const token = await createSessionToken(expectedEmail)
+  if (!emailMatches || !passwordMatches) {
+    return NextResponse.json({ ok: false, error: "Incorrect email or password." }, { status: 401 })
+  }
+
+  let epoch = 0
+  try {
+    epoch = await getSessionEpoch()
+  } catch {
+    epoch = 0
+  }
+
+  const token = await createSessionToken(expectedEmail, epoch)
   const response = NextResponse.json({ ok: true })
   response.cookies.set(SESSION_COOKIE, token, sessionCookieOptions)
   return response
+}
+
+function safeEqual(a: string, b: string): boolean {
+  return timingSafeEqual(a, b)
 }
