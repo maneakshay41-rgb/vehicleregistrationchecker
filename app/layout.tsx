@@ -5,7 +5,6 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Vehicle RC Lookup',
   description: 'Look up vehicle registration, insurance, PUCC, RTO and challan details.',
-  generator: 'v0.app',
   icons: {
     icon: [
       {
@@ -41,6 +40,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <body className="antialiased">
+        <span className="fixed right-4 top-4 z-50 text-sm font-semibold tracking-tight text-foreground">
+          Uber
+        </span>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
