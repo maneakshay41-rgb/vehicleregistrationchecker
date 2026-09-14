@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { Resend } from "resend"
+import { sendEmail } from "@/lib/email"
 import { getRedis, REDIS_KEYS } from "@/lib/redis"
 import { timingSafeEqual, verifyPassword } from "@/lib/password"
 import {
@@ -117,15 +117,8 @@ export async function POST(request: Request) {
   const approveUrl = `${origin}/api/login-approval/action?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}&decision=approve`
   const rejectUrl = `${origin}/api/login-approval/action?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}&decision=reject`
 
-  const resend = new Resend(resendApiKey)
-  const domain = process.env.RESEND_EMAIL_DOMAIN
-  const from = domain
-    ? `Vehicle RC Checker <no-reply@${domain}>`
-    : "Vehicle RC Checker <onboarding@resend.dev>"
-
-  const { error } = await resend.emails.send({
-    from,
-    to: [adminEmail],
+  const sent = await sendEmail({
+    to: adminEmail,
     subject: "Vehicle Checker – Login Approval Required",
     html: approvalEmailHtml({ staffEmail, ip, approveUrl, rejectUrl }),
     text:
@@ -138,8 +131,8 @@ export async function POST(request: Request) {
       `This request expires in 10 minutes. If you did not expect this, reject it.`,
   })
 
-  if (error) {
-    console.error("[v0] Login approval email failed:", error.message)
+  if (!sent.ok) {
+    console.error("[v0] Login approval email failed:", sent.errorMessage)
     try {
       await discardApproval(id)
     } catch {
