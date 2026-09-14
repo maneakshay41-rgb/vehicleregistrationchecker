@@ -26,6 +26,18 @@ export interface VehicleRcData {
   challan_details: ChallanDetail[]
 }
 
+/**
+ * The ONLY vehicle-related shape sent to the browser for the Staff View.
+ * Contains the searched RC number plus non-sensitive, synthetic display
+ * values. No owner, mobile, insurance, PUCC, RTO or raw API data is included.
+ */
+export interface StaffViewData {
+  rc_number: string
+  creation_date: string
+  status: string
+  last_trip_date: string
+}
+
 export type RcLookupResponse =
-  | { ok: true; data: VehicleRcData }
+  | { ok: true; data: StaffViewData }
   | { ok: false; error: string }
