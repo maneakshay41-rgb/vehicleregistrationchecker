@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+
+type Phase = "form" | "pending"
 
 export function LoginForm() {
   const router = useRouter()
@@ -11,6 +13,59 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [notice, setNotice] = useState("")
+  const [phase, setPhase] = useState<Phase>("form")
+  const pollStartRef = useRef(0)
+
+  // While waiting for admin approval, poll the server for the decision. The
+  // session is minted server-side; here we only react to the resulting status.
+  useEffect(() => {
+    if (phase !== "pending") return
+    let active = true
+    pollStartRef.current = Date.now()
+
+    const interval = setInterval(async () => {
+      // Give up after the 10 minute approval window (plus a small buffer).
+      if (Date.now() - pollStartRef.current > 11 * 60 * 1000) {
+        if (!active) return
+        clearInterval(interval)
+        setPhase("form")
+        setPassword("")
+        setNotice("Your approval request timed out. Please sign in again.")
+        return
+      }
+
+      try {
+        const res = await fetch("/api/login-approval/status", { cache: "no-store" })
+        const data = (await res.json()) as { status?: string }
+        if (!active) return
+
+        if (data.status === "approved") {
+          clearInterval(interval)
+          router.replace("/")
+          router.refresh()
+        } else if (data.status === "rejected") {
+          clearInterval(interval)
+          setPhase("form")
+          setPassword("")
+          setNotice("Your login was rejected by the administrator. Please try again.")
+        } else if (data.status === "expired" || data.status === "none") {
+          clearInterval(interval)
+          setPhase("form")
+          setPassword("")
+          setNotice("Your approval request expired. Please sign in again.")
+        }
+        // "pending" → keep waiting
+      } catch {
+        // Ignore transient network errors and keep polling.
+      }
+    }, 3000)
+
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
+  }, [phase, router])
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -23,6 +78,7 @@ export function LoginForm() {
 
     setLoading(true)
     setError("")
+    setNotice("")
 
     try {
       const res = await fetch("/api/login", {
@@ -30,10 +86,10 @@ export function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       })
-      const payload = (await res.json()) as { ok: boolean; error?: string }
+      const payload = (await res.json()) as { ok: boolean; status?: string; error?: string }
       if (payload.ok) {
-        router.replace("/")
-        router.refresh()
+        // Credentials accepted — now waiting for mandatory admin approval.
+        setPhase("pending")
       } else {
         setError(payload.error ?? "Unable to sign in.")
       }
@@ -44,11 +100,52 @@ export function LoginForm() {
     }
   }
 
+  function cancelPending() {
+    setPhase("form")
+    setPassword("")
+    setNotice("Login approval cancelled. You can sign in again when ready.")
+  }
+
+  if (phase === "pending") {
+    return (
+      <div
+        className="flex flex-col items-center gap-5 rounded-xl border border-border bg-card p-6 text-center shadow-sm"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent"
+          aria-hidden="true"
+        />
+        <div className="flex flex-col gap-1.5">
+          <p className="text-base font-semibold text-foreground">Waiting for admin approval…</p>
+          <p className="text-sm text-muted-foreground text-pretty">
+            An approval request has been sent to the administrator. You&apos;ll continue
+            automatically once it&apos;s approved. This request expires in 10 minutes.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={cancelPending}
+          className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Cancel
+        </button>
+      </div>
+    )
+  }
+
   return (
     <form
       onSubmit={handleSubmit}
       className="flex flex-col gap-5 rounded-xl border border-border bg-card p-6 shadow-sm"
     >
+      {notice !== "" && (
+        <p className="rounded-lg border border-border bg-muted px-4 py-2.5 text-sm font-medium text-muted-foreground">
+          {notice}
+        </p>
+      )}
+
       <div className="flex flex-col gap-2">
         <label htmlFor="email" className="text-sm font-medium text-foreground">
           Email or username
