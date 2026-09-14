@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { parseRcResponse } from "@/lib/parse-rc"
-import { logRcLookupToSheet } from "@/lib/sheets-logger"
+import { logRcLookup } from "@/lib/rc-log"
 import type { RcLookupResponse } from "@/lib/vehicle-types"
 
 export const runtime = "nodejs"
@@ -67,10 +67,10 @@ export async function POST(request: Request) {
     return jsonError("No vehicle details found for that registration number.", 404)
   }
 
-  // Log the complete ORIGINAL API response to Google Sheets, server-side.
+  // Log the complete ORIGINAL API response to Supabase, server-side.
   // Awaited so the write completes before the serverless function suspends,
   // but wrapped so any failure never affects the user-facing response.
-  await logRcLookupToSheet({ rcNumber: data.rc_number, payload })
+  await logRcLookup({ rcNumber: data.rc_number, payload })
 
   return NextResponse.json<RcLookupResponse>({ ok: true, data })
 }
