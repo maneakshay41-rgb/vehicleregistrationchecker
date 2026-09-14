@@ -3,13 +3,13 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { RcResult } from "@/components/rc-result"
-import type { RcLookupResponse, VehicleRcData } from "@/lib/vehicle-types"
+import type { RcLookupResponse, StaffViewData } from "@/lib/vehicle-types"
 
 export function RcLookup() {
   const [vehicleNumber, setVehicleNumber] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [result, setResult] = useState<VehicleRcData | null>(null)
+  const [result, setResult] = useState<StaffViewData | null>(null)
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()

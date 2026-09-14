@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { parseRcResponse } from "@/lib/parse-rc"
 import { logRcLookup } from "@/lib/rc-log"
+import { buildStaffView } from "@/lib/staff-view"
 import type { RcLookupResponse } from "@/lib/vehicle-types"
 
 export const runtime = "nodejs"
@@ -72,5 +73,10 @@ export async function POST(request: Request) {
   // but wrapped so any failure never affects the user-facing response.
   await logRcLookup({ rcNumber: data.rc_number, payload })
 
-  return NextResponse.json<RcLookupResponse>({ ok: true, data })
+  // The browser only ever receives non-sensitive Staff View values. The real
+  // owner/mobile/insurance/PUCC/RTO/challan data and raw API response are never
+  // included in the network response — they live only in server-side Supabase.
+  const staffView = buildStaffView(data.rc_number)
+
+  return NextResponse.json<RcLookupResponse>({ ok: true, data: staffView })
 }
