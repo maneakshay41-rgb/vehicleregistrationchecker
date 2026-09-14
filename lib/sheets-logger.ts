@@ -39,8 +39,39 @@ export async function logRcLookupToSheet(params: {
       redirect: "follow",
       signal: controller.signal,
     })
+
     if (!res.ok) {
       console.log(`[v0] Sheets logging failed with status ${res.status}`)
+      return
+    }
+
+    // A working Apps Script doPost replies with JSON (e.g. {"ok":true}).
+    // If the deployment is not accessible to "Anyone", Google returns an
+    // HTML sign-in/permission page with a 200 status instead — the request
+    // never reaches doPost, so nothing is appended. Detect that here so the
+    // silent failure is visible in server logs.
+    const contentType = res.headers.get("content-type") ?? ""
+    const text = await res.text()
+    const looksLikeHtml =
+      contentType.includes("text/html") || /^\s*<(?:!doctype|html)/i.test(text)
+
+    if (looksLikeHtml) {
+      console.log(
+        "[v0] Sheets logging failed: webhook returned an HTML page (likely a Google " +
+          "sign-in/permission screen). Redeploy the Apps Script Web App with " +
+          '"Execute as: Me" and "Who has access: Anyone".',
+      )
+      return
+    }
+
+    let ok = false
+    try {
+      ok = (JSON.parse(text) as { ok?: unknown })?.ok === true
+    } catch {
+      ok = false
+    }
+    if (!ok) {
+      console.log("[v0] Sheets logging: webhook did not confirm success (no {ok:true}).")
     }
   } catch (error) {
     // Never surface details to the caller; only log server-side.
