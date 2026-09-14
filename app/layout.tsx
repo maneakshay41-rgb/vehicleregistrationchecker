@@ -5,23 +5,6 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Vehicle RC Lookup',
   description: 'Look up vehicle registration, insurance, PUCC, RTO and challan details.',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
 }
 
 export const viewport: Viewport = {
@@ -40,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <body className="antialiased">
-        <span className="fixed right-4 top-4 z-50 text-sm font-semibold tracking-tight text-foreground">
+        <span className="fixed right-4 top-4 z-50 text-[32px] font-bold leading-none tracking-tight text-foreground">
           Uber
         </span>
         {children}
