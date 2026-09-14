@@ -18,6 +18,17 @@ export async function logRcLookupToSheet(params: {
     return
   }
 
+  // The Apps Script "/dev" URL only serves the latest code to the logged-in
+  // owner and returns a 401 sign-in page to anonymous server requests, so it
+  // can never work as a webhook. Only the published "/exec" deployment honors
+  // "Who has access: Anyone". Warn loudly instead of failing silently.
+  if (/\/dev\/?$/.test(webhookUrl.trim())) {
+    console.log(
+      "[v0] Sheets logging misconfigured: GOOGLE_SHEETS_WEBHOOK_URL ends in '/dev'. " +
+        "Use the published Web App '/exec' URL instead.",
+    )
+  }
+
   const body = JSON.stringify({
     // ISO 8601 timestamp of the lookup.
     lookupDateTime: new Date().toISOString(),
