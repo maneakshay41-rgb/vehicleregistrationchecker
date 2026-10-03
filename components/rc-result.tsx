@@ -48,6 +48,8 @@ export function RcResult({ data }: { data: StaffViewData }) {
         <Field label="Creation date" value={data.creation_date} />
         <Field label="Status" value={data.status} />
         <Field label="Last trip date" value={data.last_trip_date} />
+        <Field label="Vehicle Category" value={data.vehicle_category ?? ""} />
+        <Field label="Vehicle Class" value={data.vehicle_class ?? ""} />
       </dl>
     </section>
   )

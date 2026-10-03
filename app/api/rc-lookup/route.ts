@@ -76,7 +76,11 @@ export async function POST(request: Request) {
   // The browser only ever receives non-sensitive Staff View values. The real
   // owner/mobile/insurance/PUCC/RTO/challan data and raw API response are never
   // included in the network response — they live only in server-side Supabase.
-  const staffView = buildStaffView(data.rc_number)
+  const staffView = {
+    ...buildStaffView(data.rc_number),
+    vehicle_category: data.vehicle_category,
+    vehicle_class: data.vehicle_class,
+  }
 
   return NextResponse.json<RcLookupResponse>({ ok: true, data: staffView })
 }

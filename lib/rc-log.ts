@@ -62,6 +62,7 @@ function extractColumns(payload: unknown) {
     insurance_company: pick(data, "insurance_company", "insurer", "insurance_name"),
     insurance_valid_upto: pick(data, "insurance_upto", "insurance_expiry", "insurance_valid_upto"),
     pucc_valid_upto: pick(data, "pucc_upto", "pucc_valid_upto", "puc_upto"),
+    vehicle_class: pick(data, "vehicle_category_description"),
   }
 }
 

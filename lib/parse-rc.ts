@@ -94,6 +94,8 @@ export function parseRcResponse(payload: unknown): VehicleRcData | null {
     registered_at: pick(data, "registered_at", "rto", "registered_rto"),
     rc_status: pick(data, "rc_status", "status", "vehicle_status"),
     rto_code: pick(data, "rto_code", "rto_cd", "office_code"),
+    vehicle_category: pick(data, "vehicle_category"),
+    vehicle_class: pick(data, "vehicle_category_description"),
     challan_details: normalizeChallans(
       data["challan_details"] ?? data["challans"] ?? data["challan"],
     ),

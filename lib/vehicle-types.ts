@@ -23,6 +23,8 @@ export interface VehicleRcData {
   registered_at: string
   rc_status: string
   rto_code: string
+  vehicle_category: string
+  vehicle_class: string
   challan_details: ChallanDetail[]
 }
 
@@ -36,6 +38,8 @@ export interface StaffViewData {
   creation_date: string
   status: string
   last_trip_date: string
+  vehicle_category?: string
+  vehicle_class?: string
 }
 
 export type RcLookupResponse =
